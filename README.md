@@ -105,36 +105,74 @@ The best UX for Hub-hosted ONNX is:
 
 Until then, the recommended workflow is to `snapshot_download` in user code and pass the resulting local `.onnx` path to `ModelSpec.checkpoint`.
 
-## Candidate non-Euclidean models
+## Candidate Non-Euclidean Models
 
-This list is intentionally curated toward models likely to be useful for embedding visualization.
+Curated list of models suitable for embedding visualization. Priority given to models with pretrained weights and permissive licenses.
 
-### Hyperbolic vision-language (image/text)
+### Hyperbolic Vision-Language (Image + Text)
 
-- HyCoCLIP (ICLR 2025): https://arxiv.org/abs/2410.06912, code: https://github.com/PalAvik/hycoclip, weights: https://huggingface.co/avik-pal/hycoclip (CC BY-NC per repo)
-- MERU (ICML 2023): https://arxiv.org/abs/2304.09172, code: https://github.com/facebookresearch/meru (CC BY-NC per repo)
+| Model | Venue | Geometry | License | Weights | Links |
+|-------|-------|----------|---------|---------|-------|
+| **HyCoCLIP** | ICLR 2025 | Lorentz | CC-BY-NC | ✅ ViT-S/B | [paper](https://arxiv.org/abs/2410.06912) · [code](https://github.com/PalAvik/hycoclip) · [weights](https://huggingface.co/avik-pal/hycoclip) |
+| **MERU** | ICML 2023 | Lorentz | CC-BY-NC | ✅ ViT-S/B/L | [paper](https://arxiv.org/abs/2304.09172) · [code](https://github.com/facebookresearch/meru) |
 
-### Hyperbolic vision encoders / metric learning
+### Hyperbolic Vision Encoders / Metric Learning
 
-- Hyperbolic Vision Transformers (CVPR 2022): https://arxiv.org/abs/2203.10833, code: https://github.com/htdt/hyp_metric (MIT)
-- Hyperbolic Image Embeddings (CVPR 2020): https://arxiv.org/abs/1904.02239, code: https://github.com/leymir/hyperbolic-image-embeddings (MIT)
-- Fully Hyperbolic CNNs (ICLR 2024): https://openreview.net/forum?id=ekz1hN5QNh, code: https://github.com/kschwethelm/HyperbolicCV (MIT)
-- Hyperbolic Visual Embedding Learning for Zero-Shot Recognition (CVPR 2020): https://github.com/ShaoTengLiu/Hyperbolic_ZSL (license not declared in GitHub metadata)
+| Model | Venue | Geometry | License | Weights | Links |
+|-------|-------|----------|---------|---------|-------|
+| **Hyp-ViT** | CVPR 2022 | Poincaré | **MIT** ✅ | ❌ (uses timm backbones) | [paper](https://arxiv.org/abs/2203.10833) · [code](https://github.com/htdt/hyp_metric) |
+| **HIE** | CVPR 2020 | Poincaré | **MIT** ✅ | ❌ | [paper](https://arxiv.org/abs/1904.02239) · [code](https://github.com/leymir/hyperbolic-image-embeddings) |
+| **HCNN** | ICLR 2024 | Lorentz | **MIT** ✅ | ❌ | [paper](https://openreview.net/forum?id=ekz1hN5QNh) · [code](https://github.com/kschwethelm/HyperbolicCV) |
+| **Hyp-ZSL** | CVPR 2020 | Hyperbolic | Unknown | ❌ | [code](https://github.com/ShaoTengLiu/Hyperbolic_ZSL) |
 
-### Hyperbolic graph / hierarchy embeddings
+### Hyperbolic Graph / Hierarchy Embeddings
 
-- Hyperbolic Graph Convolutional Networks (NeurIPS 2019): paper: http://snap.stanford.edu/hgcn/, code: https://github.com/HazyResearch/hgcn (license not declared in GitHub metadata)
-- Poincare Embeddings (NeurIPS 2017): https://arxiv.org/abs/1705.08039, code: https://github.com/facebookresearch/poincare-embeddings (archived; license not declared in GitHub metadata)
-- Hyperbolic Entailment Cones (ICML 2018): https://arxiv.org/abs/1804.01882, code: https://github.com/dalab/hyperbolic_cones (Apache-2.0)
-- Poincare GloVe (ICLR 2019 workshop): code: https://github.com/alex-tifrea/poincare_glove (LGPL-2.1)
+| Model | Venue | Geometry | License | Links |
+|-------|-------|----------|---------|-------|
+| **HGCN** | NeurIPS 2019 | Poincaré/Lorentz | Unknown | [paper](http://snap.stanford.edu/hgcn/) · [code](https://github.com/HazyResearch/hgcn) |
+| **Poincaré Embeddings** | NeurIPS 2017 | Poincaré | Unknown | [paper](https://arxiv.org/abs/1705.08039) · [code](https://github.com/facebookresearch/poincare-embeddings) (archived) |
+| **Entailment Cones** | ICML 2018 | Poincaré | Apache-2.0 | [paper](https://arxiv.org/abs/1804.01882) · [code](https://github.com/dalab/hyperbolic_cones) |
+| **Poincaré GloVe** | ICLR-W 2019 | Poincaré | LGPL-2.1 | [code](https://github.com/alex-tifrea/poincare_glove) |
 
-### Data curation utilities (hyperbolic)
+### Data Curation (Hyperbolic)
 
-- HYPE: Hyperbolic Entailment Filtering for Underspecified Images and Texts (ECCV 2024): https://arxiv.org/abs/2404.17507, code: https://github.com/naver-ai/hype (license marked "Other" in GitHub metadata)
+| Model | Venue | Use Case | License | Links |
+|-------|-------|----------|---------|-------|
+| **HYPE** | ECCV 2024 | Filtering underspecified data | Other | [paper](https://arxiv.org/abs/2404.17507) · [code](https://github.com/naver-ai/hype) |
 
-### Spherical embeddings
+### Spherical Embeddings
 
-- Spherical Text Embedding (NeurIPS 2019): code: https://github.com/yumeng5/Spherical-Text-Embedding (Apache-2.0)
+| Model | Venue | Geometry | License | Links |
+|-------|-------|----------|---------|-------|
+| **Spherical Text** | NeurIPS 2019 | Spherical | Apache-2.0 | [code](https://github.com/yumeng5/Spherical-Text-Embedding) |
+| **SphereFace** | CVPR 2017 | Hypersphere | MIT | [paper](https://arxiv.org/abs/1704.08063) · [code](https://github.com/wy1iu/sphereface) |
+| **ArcFace** | CVPR 2019 | Hypersphere | MIT | [paper](https://arxiv.org/abs/1801.07698) · [code](https://github.com/deepinsight/insightface) |
+
+### Product Manifolds (Mixed Curvature)
+
+| Model | Venue | Geometry | License | Links |
+|-------|-------|----------|---------|-------|
+| **Hyperbolics** | ICLR 2019 | H×S×E products | MIT | [paper](https://openreview.net/forum?id=HJxeWnCcF7) · [code](https://github.com/HazyResearch/hyperbolics) |
+| **CurvLearn** | ICDE 2022 | Mixed-curvature | Apache-2.0 | [paper](https://arxiv.org/abs/2203.14683) · [code](https://github.com/alibaba/Curvature-Learning-Framework) |
+
+### Priority for ONNX Export
+
+Based on usefulness for HyperView and license compatibility:
+
+| Priority | Model | Why |
+|----------|-------|-----|
+| 🥇 | HyCoCLIP/MERU | Best hyperbolic CLIP models, already working |
+| 🥈 | Hyp-ViT | MIT license, standard ViT backbone, easy export |
+| 🥈 | HIE | MIT license, foundational work, includes hyptorch |
+| 🥉 | HCNN | MIT license, but harder export (custom ops) |
+
+### Related Libraries
+
+| Library | Purpose | PyPI |
+|---------|---------|------|
+| [geoopt](https://github.com/geoopt/geoopt) | Riemannian optimization in PyTorch | `pip install geoopt` |
+| [HypLL](https://github.com/maxvanspengler/hyperbolic_learning_library) | Hyperbolic layers for PyTorch | `pip install hypll` |
+| [hyptorch](https://github.com/leymir/hyperbolic-image-embeddings) | Poincaré ball operations | (in HIE repo) |
 
 ## License and attribution
 

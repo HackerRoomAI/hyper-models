@@ -1,25 +1,31 @@
 """Upload exported ONNX artifacts to the Hugging Face Hub.
 
-Uploads the ONNX model with a proper model card (README.md) containing
-YAML metadata for discoverability on Hugging Face.
+Uploads ONNX models to a unified hyperbolic-clip repository with multiple
+model variants organized in subdirectories.
 
 Example:
 
     cd hyper_models/hycoclip_onnx
     uv run python hf/upload_to_hf.py \
-        --repo-id HackerRoomAI/hycoclip-vit-s-onnx \
+        --repo-id mnm-matin/hyperbolic-clip \
+        --model hycoclip-vit-s \
         --onnx ./outputs/hycoclip_vit_s_image_encoder.onnx \
-        --onnx-data ./outputs/hycoclip_vit_s_image_encoder.onnx.data \
-        --variant vit_s
+        --onnx-data ./outputs/hycoclip_vit_s_image_encoder.onnx.data
 
 Requirements:
-- huggingface_hub (install inside the hycoclip_onnx environment: uv add huggingface-hub)
-- You must be logged in: huggingface-cli login
+- huggingface_hub: uv add huggingface-hub
+- Login: hf auth login
 
-What gets uploaded to Hugging Face:
-- README.md (model card with YAML metadata)
-- onnx/model.onnx (the ONNX model)
-- onnx/model.onnx.data (external weights, if present)
+Repository structure on HuggingFace:
+    hyperbolic-clip/
+    ├── README.md                    # Main repo card
+    ├── hycoclip-vit-s/
+    │   ├── model.onnx
+    │   └── model.onnx.data
+    ├── hycoclip-vit-b/
+    │   └── ...
+    └── meru-vit-s/
+        └── ...
 
 Important:
 - HyCoCLIP/MERU is CC-BY-NC (non-commercial). Respect upstream licensing.
@@ -31,13 +37,12 @@ import argparse
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# Model card template with YAML frontmatter for Hugging Face
+# Main repo README (shown on the HF repo page)
 # ---------------------------------------------------------------------------
-MODEL_CARD_TEMPLATE = '''---
+REPO_README_TEMPLATE = '''---
 library_name: onnx
 pipeline_tag: feature-extraction
 license: cc-by-nc-4.0
-base_model: PalAvik/hycoclip
 tags:
   - onnx
   - vision
@@ -48,107 +53,80 @@ tags:
   - non-euclidean
   - lorentz
   - meru
+  - hycoclip
 language:
   - en
 ---
 
-# HyCoCLIP {variant_display} Image Encoder (ONNX)
+# Hyperbolic CLIP Models (ONNX)
 
-This is the **ONNX export** of the [HyCoCLIP/MERU](https://github.com/PalAvik/hycoclip) image encoder for **hyperbolic image embeddings**.
+This repository contains **ONNX exports** of hyperbolic vision-language models for **hyperbolic image embeddings**.
 
-## Model Description
+## Available Models
 
-| Property | Value |
-|----------|-------|
-| **Model type** | ONNX (Vision Transformer image encoder) |
-| **Variant** | {variant_display} |
-| **Geometry** | Hyperbolic (Lorentz/Hyperboloid model) |
-| **Input** | `(batch, 3, 224, 224)` float32 images normalized to `[0, 1]` |
-| **Output** | Hyperboloid coordinates `(t, x₁...xₙ)` where `t = √(1/c + ‖x‖²)` |
-| **Embedding dim** | 513 (1 time component + 512 spatial) |
-| **Curvature** | Learned (exported as secondary output) |
-| **License** | CC-BY-NC-4.0 (Non-commercial use only) |
+| Model | Architecture | Embedding Dim | Size | Path |
+|-------|--------------|---------------|------|------|
+{model_table}
 
-## Intended Uses
-
-- Hyperbolic image embeddings for [HyperView](https://github.com/HackerRoomAI/HyperView) visualization
-- Hierarchical image similarity and retrieval
-- Non-Euclidean representation learning research
-
-## Usage with ONNX Runtime
+## Quick Start
 
 ```python
 import onnxruntime as ort
 import numpy as np
 from huggingface_hub import hf_hub_download
 
-# Download model
-onnx_path = hf_hub_download(repo_id="{repo_id}", filename="onnx/model.onnx")
+# Download a model
+onnx_path = hf_hub_download(
+    repo_id="{repo_id}",
+    filename="hycoclip-vit-s/model.onnx"  # or other model path
+)
 
-# Load model
+# Load and run
 session = ort.InferenceSession(onnx_path)
+image = np.random.rand(1, 3, 224, 224).astype(np.float32)  # Your preprocessed image
+embedding, curvature = session.run(None, {{"image": image}})
 
-# Prepare input: (batch, 3, 224, 224) float32 in [0, 1]
-# Apply standard ImageNet preprocessing (resize, center crop, normalize)
-image = np.random.rand(1, 3, 224, 224).astype(np.float32)
+print(f"Embedding shape: {{embedding.shape}}")  # (1, 513) - hyperboloid format
+```
 
-# Run inference
-embedding_hyperboloid, curvature = session.run(None, {{"image": image}})
+## Model Details
 
-print(f"Embedding shape: {{embedding_hyperboloid.shape}}")  # (1, 513)
-print(f"Curvature: {{curvature[0]:.4f}}")
+All models output embeddings in **Lorentz/Hyperboloid format**:
+- Output: `(t, x₁...xₙ)` where `t = √(1/c + ‖x‖²)`
+- Embedding dim: 513 (1 time component + 512 spatial)
+- Curvature `c` is learned and exported as secondary output
+
+### Converting to Poincaré Ball
+
+```python
+t = embedding[:, 0:1]   # time component
+x = embedding[:, 1:]    # spatial components
+poincare = x / (t + 1)  # stereographic projection
 ```
 
 ## Usage with HyperView
 
 ```python
 import hyperview as hv
-from hyper_models import model_zoo as mz
+from huggingface_hub import hf_hub_download
 
-# Load dataset
+# Download model
+model_path = hf_hub_download("{repo_id}", "hycoclip-vit-s/model.onnx")
+
+# Use with HyperView
 ds = hv.Dataset("my_images")
 ds.add_images_dir("/path/to/images")
-
-# Use the ONNX model for embeddings
-spec = mz.hycoclip_onnx(
-    model_id="hycoclip_{variant}",
-    hf_repo="{repo_id}"
-)
-ds.compute_embeddings(spec)
-
-# Visualize in hyperbolic space
+ds.compute_embeddings(onnx_path=model_path)
 hv.show(ds)
 ```
 
-## Outputs
+## License
 
-| Output | Shape | Description |
-|--------|-------|-------------|
-| `embedding_hyperboloid` | `(batch, 513)` | Hyperboloid coordinates `(t, x₁...x₅₁₂)` |
-| `curvature` | `(1,)` | Learned curvature parameter `c` |
+**CC-BY-NC-4.0** (Non-commercial use only)
 
-### Converting to Poincaré Ball (for visualization)
-
-```python
-# Hyperboloid (t, x) → Poincaré ball
-t = embedding_hyperboloid[:, 0:1]  # time component
-x = embedding_hyperboloid[:, 1:]   # spatial components
-poincare = x / (t + 1)             # stereographic projection
-```
-
-## Technical Details
-
-- **Architecture**: Vision Transformer (ViT) with MoCo-v3 initialization
-- **Training**: Contrastive learning with hyperbolic entailment loss
-- **Curvature**: Learned during training, exported as model output
-- **ONNX opset**: 18
-- **Dynamic batching**: Supported (batch dimension is dynamic)
-
-## Limitations
-
-- **Non-commercial use only** (CC-BY-NC license)
-- Optimized for natural images; may not generalize to other domains
-- Requires standard ImageNet preprocessing (resize to 224×224, normalize)
+Based on:
+- [PalAvik/hycoclip](https://github.com/PalAvik/hycoclip)
+- [facebookresearch/meru](https://github.com/facebookresearch/meru)
 
 ## Citation
 
@@ -159,61 +137,68 @@ poincare = x / (t + 1)             # stereographic projection
   booktitle={{ICML}},
   year={{2023}}
 }}
-
-@article{{hycoclip2024,
-  title={{HyCoCLIP: Hyperbolic Contrastive Language-Image Pre-training}},
-  author={{Avik Pal and others}},
-  year={{2024}}
-}}
 ```
-
-## Acknowledgments
-
-- Based on [PalAvik/hycoclip](https://github.com/PalAvik/hycoclip)
-- Original MERU paper: [facebookresearch/meru](https://github.com/facebookresearch/meru)
-- ONNX export by [HyperView](https://github.com/HackerRoomAI/HyperView) team
 '''
+
+# Model-specific info for the table
+MODEL_INFO = {
+    "hycoclip-vit-s": {"arch": "ViT-S/16", "dim": 513, "size": "~84 MB"},
+    "hycoclip-vit-b": {"arch": "ViT-B/16", "dim": 513, "size": "~350 MB"},
+    "meru-vit-s": {"arch": "ViT-S/16", "dim": 513, "size": "~84 MB"},
+    "meru-vit-b": {"arch": "ViT-B/16", "dim": 513, "size": "~350 MB"},
+}
 
 
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="Upload ONNX artifacts with model card to Hugging Face Hub",
+        description="Upload ONNX model to unified hyperbolic-clip repo",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-What gets uploaded:
-  - README.md         Model card with YAML metadata for discoverability
-  - onnx/model.onnx   The ONNX model file
-  - onnx/model.onnx.data  External weights (if --onnx-data provided)
+Repository structure:
+  hyperbolic-clip/
+  ├── README.md              # Auto-generated repo card
+  ├── hycoclip-vit-s/
+  │   ├── model.onnx
+  │   └── model.onnx.data
+  └── meru-vit-b/
+      └── ...
 
-The model card includes proper metadata (library_name: onnx, pipeline_tag,
-license, tags) so the model appears correctly in Hugging Face search/filters.
+Example:
+  uv run python hf/upload_to_hf.py \\
+      --repo-id mnm-matin/hyperbolic-clip \\
+      --model hycoclip-vit-s \\
+      --onnx ./outputs/hycoclip_vit_s_image_encoder.onnx \\
+      --onnx-data ./outputs/hycoclip_vit_s_image_encoder.onnx.data
         """,
     )
-    p.add_argument("--repo-id", required=True, help="Target HF repo, e.g. HackerRoomAI/hycoclip-vit-s-onnx")
+    p.add_argument("--repo-id", required=True, help="HF repo (e.g. mnm-matin/hyperbolic-clip)")
+    p.add_argument("--model", required=True, help="Model name/subfolder (e.g. hycoclip-vit-s, meru-vit-b)")
     p.add_argument("--onnx", required=True, help="Path to .onnx file")
     p.add_argument("--onnx-data", default=None, help="Path to .onnx.data file (external weights)")
-    p.add_argument(
-        "--variant",
-        choices=["vit_s", "vit_b", "vit_l"],
-        default="vit_s",
-        help="Model variant for documentation (default: vit_s)",
-    )
-    p.add_argument(
-        "--private",
-        action="store_true",
-        help="Create the repo as private",
-    )
-    p.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Print what would be uploaded without actually uploading",
-    )
+    p.add_argument("--private", action="store_true", help="Create repo as private")
+    p.add_argument("--dry-run", action="store_true", help="Preview without uploading")
     return p.parse_args()
 
 
-def _variant_display(variant: str) -> str:
-    """Convert variant to display name."""
-    return {"vit_s": "ViT-S", "vit_b": "ViT-B", "vit_l": "ViT-L"}.get(variant, variant.upper())
+def _get_existing_models(api, repo_id: str) -> list[str]:
+    """Get list of model subdirectories already in the repo."""
+    try:
+        files = list(api.list_repo_tree(repo_id, recursive=False))
+        return [f.path for f in files if f.path not in ("README.md", ".gitattributes") and not f.path.startswith(".")]
+    except Exception:
+        return []
+
+
+def _generate_model_table(models: list[str], repo_id: str) -> str:
+    """Generate markdown table of available models."""
+    if not models:
+        return "| *No models uploaded yet* | | | | |"
+    
+    rows = []
+    for model in sorted(models):
+        info = MODEL_INFO.get(model, {"arch": "ViT", "dim": 513, "size": "~100 MB"})
+        rows.append(f"| **{model}** | {info['arch']} | {info['dim']} | {info['size']} | `{model}/model.onnx` |")
+    return "\n".join(rows)
 
 
 def main() -> int:
@@ -232,32 +217,25 @@ def main() -> int:
         if not data_path.exists():
             raise SystemExit(f"ONNX data file not found: {data_path}")
 
-    # Generate model card
-    variant_display = _variant_display(args.variant)
-    readme_content = MODEL_CARD_TEMPLATE.format(
-        variant=args.variant,
-        variant_display=variant_display,
-        repo_id=args.repo_id,
-    )
-
+    model_name = args.model.strip().lower()
+    
     # Show what will be uploaded
     print("=" * 60)
     print("Hugging Face Upload Summary")
     print("=" * 60)
     print(f"Repository:  https://huggingface.co/{args.repo_id}")
+    print(f"Model:       {model_name}")
     print(f"Private:     {args.private}")
-    print(f"Variant:     {variant_display}")
     print()
     print("Files to upload:")
-    print(f"  - README.md (model card, {len(readme_content)} bytes)")
-    print(f"  - onnx/model.onnx ({onnx_path.stat().st_size / 1024 / 1024:.2f} MB)")
+    print(f"  - {model_name}/model.onnx ({onnx_path.stat().st_size / 1024 / 1024:.2f} MB)")
     if data_path:
-        print(f"  - onnx/model.onnx.data ({data_path.stat().st_size / 1024 / 1024:.2f} MB)")
+        print(f"  - {model_name}/model.onnx.data ({data_path.stat().st_size / 1024 / 1024:.2f} MB)")
+    print(f"  - README.md (repo card, will be updated)")
     print("=" * 60)
 
     if args.dry_run:
-        print("\n[DRY RUN] Would upload the above files. Model card preview:\n")
-        print(readme_content[:1500] + "\n...[truncated]...")
+        print("\n[DRY RUN] Would upload the above files.")
         return 0
 
     # Import huggingface_hub
@@ -267,7 +245,7 @@ def main() -> int:
         raise SystemExit(
             "Missing dependency: huggingface_hub\n"
             "Install with: uv add huggingface-hub\n"
-            "Then login with: huggingface-cli login"
+            "Then login with: hf auth login"
         ) from exc
 
     api = HfApi()
@@ -276,36 +254,47 @@ def main() -> int:
     print("\nCreating repository (if needed)...")
     api.create_repo(repo_id=args.repo_id, private=args.private, exist_ok=True)
 
-    # Upload README.md (model card)
-    print("Uploading README.md (model card)...")
+    # Upload ONNX file(s) to model subdirectory
+    print(f"Uploading {model_name}/model.onnx...")
+    api.upload_file(
+        repo_id=args.repo_id,
+        path_or_fileobj=str(onnx_path),
+        path_in_repo=f"{model_name}/model.onnx",
+        commit_message=f"Add {model_name} ONNX model",
+    )
+
+    if data_path is not None:
+        print(f"Uploading {model_name}/model.onnx.data...")
+        api.upload_file(
+            repo_id=args.repo_id,
+            path_or_fileobj=str(data_path),
+            path_in_repo=f"{model_name}/model.onnx.data",
+            commit_message=f"Add {model_name} ONNX weights",
+        )
+
+    # Update repo README with model table
+    print("Updating README.md...")
+    existing_models = _get_existing_models(api, args.repo_id)
+    if model_name not in existing_models:
+        existing_models.append(model_name)
+    
+    model_table = _generate_model_table(existing_models, args.repo_id)
+    readme_content = REPO_README_TEMPLATE.format(
+        repo_id=args.repo_id,
+        model_table=model_table,
+    )
+    
     api.upload_file(
         repo_id=args.repo_id,
         path_or_fileobj=readme_content.encode("utf-8"),
         path_in_repo="README.md",
-        commit_message="Add model card with ONNX metadata",
+        commit_message=f"Update README with {model_name}",
     )
-
-    # Upload ONNX file(s) to onnx/ subdirectory
-    print("Uploading ONNX model...")
-    api.upload_file(
-        repo_id=args.repo_id,
-        path_or_fileobj=str(onnx_path),
-        path_in_repo="onnx/model.onnx",
-        commit_message="Add ONNX model",
-    )
-
-    if data_path is not None:
-        print("Uploading ONNX external weights...")
-        api.upload_file(
-            repo_id=args.repo_id,
-            path_or_fileobj=str(data_path),
-            path_in_repo="onnx/model.onnx.data",
-            commit_message="Add ONNX external weights",
-        )
 
     print()
     print("✅ Successfully uploaded to Hugging Face!")
     print(f"   https://huggingface.co/{args.repo_id}")
+    print(f"   Model path: {model_name}/model.onnx")
     return 0
 
 
