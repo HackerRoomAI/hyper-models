@@ -1,6 +1,7 @@
 """hyper-models: A model zoo for non-Euclidean embedding models.
 
-Hyperbolic, spherical, and product manifold models with torch-free ONNX inference.
+Hyperbolic, spherical, and product manifold models exposed through one catalog
+surface, with internal loaders such as ONNX and optional torch-backed runtimes.
 
 Example:
     >>> import hyper_models
@@ -11,12 +12,14 @@ Example:
 """
 
 from hyper_models.loader import load
+from hyper_models.loaders import list_loaders
 from hyper_models.registry import ModelInfo, get_model_info, list_models
 from hyper_models.models import ONNXModel
 from hyper_models.preprocessing import ImageConfig, preprocess_images
 
 __all__ = [
     "load",
+    "list_loaders",
     "list_models",
     "get_model_info",
     "ModelInfo",

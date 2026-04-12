@@ -1,4 +1,4 @@
-"""Model registry - maps model names to hub locations and metadata."""
+"""Catalog registry for hyper-models entries and their loader metadata."""
 
 from __future__ import annotations
 
@@ -11,13 +11,22 @@ __all__ = ["ModelInfo", "list_models", "get_model_info"]
 
 @dataclass
 class ModelInfo:
-    """Metadata for a registered model."""
+    """Metadata for a registered catalog model.
+
+    `loader` describes how the catalog entry is instantiated internally.
+    This is intentionally separate from the public catalog surface so callers
+    can always use ``hyper_models.load(name)`` regardless of runtime backend.
+    """
 
     name: str
     geometry: str  # 'hyperboloid', 'poincare', 'sphere', 'euclidean'
     dim: int
     hub_id: str
+    hub_path: str
     license: str
+    loader: str = "onnx"  # e.g. 'onnx', 'uncha-image-torch'
+    variant: str | None = None  # optional loader hint (e.g., 'vit_s', 'vit_b')
+    optional_dependencies: tuple[str, ...] = ()
     description: str = ""
     input_name: str = "image"
     output_name: str | None = None
@@ -30,6 +39,7 @@ _MODELS: dict[str, ModelInfo] = {
         geometry="hyperboloid",
         dim=513,
         hub_id="mnm-matin/hyperbolic-clip",
+        hub_path="hycoclip-vit-s/model.onnx",
         license="CC-BY-NC",
         description="HyCoCLIP ViT-Small (512D hyperboloid)",
         output_name="embedding_hyperboloid",
@@ -39,6 +49,7 @@ _MODELS: dict[str, ModelInfo] = {
         geometry="hyperboloid",
         dim=513,
         hub_id="mnm-matin/hyperbolic-clip",
+        hub_path="hycoclip-vit-b/model.onnx",
         license="CC-BY-NC",
         description="HyCoCLIP ViT-Base (512D hyperboloid)",
         output_name="embedding_hyperboloid",
@@ -48,6 +59,7 @@ _MODELS: dict[str, ModelInfo] = {
         geometry="hyperboloid",
         dim=513,
         hub_id="mnm-matin/hyperbolic-clip",
+        hub_path="meru-vit-s/model.onnx",
         license="CC-BY-NC",
         description="MERU ViT-Small (512D hyperboloid)",
         output_name="embedding_hyperboloid",
@@ -57,9 +69,45 @@ _MODELS: dict[str, ModelInfo] = {
         geometry="hyperboloid",
         dim=513,
         hub_id="mnm-matin/hyperbolic-clip",
+        hub_path="meru-vit-b/model.onnx",
         license="CC-BY-NC",
         description="MERU ViT-Base (512D hyperboloid)",
         output_name="embedding_hyperboloid",
+    ),
+    "uncha-vit-s": ModelInfo(
+        name="uncha-vit-s",
+        geometry="hyperboloid",
+        dim=513,
+        hub_id="hayeonkim/uncha",
+        hub_path="uncha_vit_s.pth",
+        license="Unknown",
+        loader="uncha-image-torch",
+        variant="vit_s",
+        optional_dependencies=("ml",),
+        description="UNCHA ViT-S/16 checkpoint (HF .pth, torch inference)",
+    ),
+    "uncha-vit-b": ModelInfo(
+        name="uncha-vit-b",
+        geometry="hyperboloid",
+        dim=513,
+        hub_id="hayeonkim/uncha",
+        hub_path="uncha_vit_b.pth",
+        license="Unknown",
+        loader="uncha-image-torch",
+        variant="vit_b",
+        optional_dependencies=("ml",),
+        description="UNCHA ViT-B/16 checkpoint (HF .pth, torch inference)",
+    ),
+    "megadescriptor": ModelInfo(
+        name="megadescriptor",
+        geometry="sphere",
+        dim=1024,
+        hub_id="BVRA/MegaDescriptor-L-384",
+        hub_path="",
+        license="MIT",
+        loader="timm-image",
+        description="MegaDescriptor-L-384 (via timm, use provider='timm-image')",
+        image_config=ImageConfig(size=384),
     ),
 }
 

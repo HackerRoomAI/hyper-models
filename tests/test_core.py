@@ -13,6 +13,11 @@ class TestRegistry:
         assert len(models) >= 4
         assert "hycoclip-vit-s" in models
 
+    def test_list_loaders(self):
+        loaders = hyper_models.list_loaders()
+        assert "onnx" in loaders
+        assert "uncha-image-torch" in loaders
+
     def test_list_models_filter(self):
         hyperbolic = hyper_models.list_models(geometry="hyperboloid")
         assert all("vit" in m for m in hyperbolic)
@@ -26,6 +31,15 @@ class TestRegistry:
     def test_get_model_info_not_found(self):
         with pytest.raises(KeyError):
             hyper_models.get_model_info("not-a-model")
+
+    def test_uncha_model_info(self):
+        info = hyper_models.get_model_info("uncha-vit-s")
+        assert info.geometry == "hyperboloid"
+        assert info.dim == 513
+        assert info.loader == "uncha-image-torch"
+        assert info.optional_dependencies == ("ml",)
+        assert info.hub_id == "hayeonkim/uncha"
+        assert info.hub_path.endswith(".pth")
 
 
 class TestPreprocessing:

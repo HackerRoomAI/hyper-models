@@ -20,13 +20,22 @@
 ## Why?
 
 - **Standardized access** to non-Euclidean embedding models
-- **Torch-free runtime** via ONNX (models published to Hugging Face Hub)
+- **One catalog surface**: model names map to internal loaders such as ONNX or optional torch-backed runtimes
 - **Simple API** — `load()` and `encode_images()`
 
 ## Installation
 
 ```bash
-pip install hyper-models
+uv pip install hyper-models
+```
+
+This base install is the simple path: it stays **torch-free** and is enough for
+ONNX-backed catalog entries such as HyCoCLIP and MERU.
+
+For torch-backed checkpoints (for example UNCHA):
+
+```bash
+uv pip install "hyper-models[ml]"
 ```
 
 ## Usage
@@ -37,7 +46,11 @@ from PIL import Image
 
 # List available models
 hyper_models.list_models()
-# ['hycoclip-vit-s', 'hycoclip-vit-b', 'meru-vit-s', 'meru-vit-b']
+# ['hycoclip-vit-s', 'hycoclip-vit-b', 'meru-vit-s', 'meru-vit-b', 'uncha-vit-s', 'uncha-vit-b']
+
+# Inspect supported internal loader kinds
+hyper_models.list_loaders()
+# ['onnx', 'uncha-image-torch']
 
 # Load model (auto-downloads from Hugging Face Hub)
 model = hyper_models.load("hycoclip-vit-s")
@@ -51,12 +64,58 @@ embeddings = model.encode_images(images)  # (1, 513) ndarray
 # Get model info
 info = hyper_models.get_model_info("hycoclip-vit-s")
 info.hub_id     # 'mnm-matin/hyperbolic-clip'
+info.loader     # 'onnx'
 info.license    # 'CC-BY-NC'
 
 # Low-level: preprocess images yourself
 batch = hyper_models.preprocess_images(images)  # (B, 3, 224, 224)
 embeddings = model.encode(batch)
 ```
+
+### Architecture
+
+`hyper-models` is intended to be a timm-like catalog for non-Euclidean models.
+
+- The public abstraction is the catalog entry name, for example `hycoclip-vit-s`.
+- Each entry declares metadata such as geometry, dimensionality, artifact path,
+  and an internal loader kind.
+- Internal loaders may differ by model family:
+  - `onnx` for exported, torch-free runtimes
+  - `uncha-image-torch` for raw checkpoints that need a PyTorch image runtime
+
+This keeps callers on one stable API:
+
+```python
+model = hyper_models.load("hycoclip-vit-s")
+model = hyper_models.load("uncha-vit-b")
+```
+
+Callers do not need to know which internal loader is used, except for optional
+dependency installation when choosing entries that need `hyper-models[ml]`.
+
+### HyperView integration
+
+HyperView auto-detects `hyper-models` names and routes them to the `hyper-models` provider.
+
+```python
+import hyperview as hv
+
+dataset = hv.Dataset.from_huggingface(
+  name="demo",
+  hf_dataset="uoft-cs/cifar10",
+  split="train",
+  image_key="img",
+)
+
+# Uses provider='hyper-models' automatically.
+space_key = dataset.compute_embeddings(model="uncha-vit-b")
+layout_key = dataset.compute_visualization(space_key=space_key, layout="poincare")
+```
+
+HyperView's simple path remains torch-free. If you use the default ONNX-backed
+`hyper-models` entries or the default `embed-anything` provider, HyperView does
+not need PyTorch. PyTorch is only needed when you explicitly select a
+torch-backed catalog entry such as `uncha-vit-s` or `uncha-vit-b`.
 
 ## Models
 
@@ -68,6 +127,8 @@ embeddings = model.encode(batch)
 | `hycoclip-vit-b` | [![HF](https://img.shields.io/badge/🤗-HuggingFace-yellow)](https://huggingface.co/mnm-matin/hyperbolic-clip/tree/main/hycoclip-vit-b) | [ICLR 2025](https://arxiv.org/abs/2410.06912) | [PalAvik/hycoclip](https://github.com/PalAvik/hycoclip) |
 | `meru-vit-s` | [![HF](https://img.shields.io/badge/🤗-HuggingFace-yellow)](https://huggingface.co/mnm-matin/hyperbolic-clip/tree/main/meru-vit-s) | [ICML 2023](https://arxiv.org/abs/2304.09172) | [facebookresearch/meru](https://github.com/facebookresearch/meru) |
 | `meru-vit-b` | [![HF](https://img.shields.io/badge/🤗-HuggingFace-yellow)](https://huggingface.co/mnm-matin/hyperbolic-clip/tree/main/meru-vit-b) | [ICML 2023](https://arxiv.org/abs/2304.09172) | [facebookresearch/meru](https://github.com/facebookresearch/meru) |
+| `uncha-vit-s` | [![HF](https://img.shields.io/badge/🤗-HuggingFace-yellow)](https://huggingface.co/hayeonkim/uncha/blob/main/uncha_vit_s.pth) | [CVPR 2026](https://arxiv.org/abs/2603.22042) | [jeeit17/UNCHA](https://github.com/jeeit17/UNCHA) |
+| `uncha-vit-b` | [![HF](https://img.shields.io/badge/🤗-HuggingFace-yellow)](https://huggingface.co/hayeonkim/uncha/blob/main/uncha_vit_b.pth) | [CVPR 2026](https://arxiv.org/abs/2603.22042) | [jeeit17/UNCHA](https://github.com/jeeit17/UNCHA) |
 | `hyp-vit` | — | [CVPR 2022](https://arxiv.org/abs/2203.10833) | [htdt/hyp_metric](https://github.com/htdt/hyp_metric) |
 | `hie` | — | [CVPR 2020](https://arxiv.org/abs/1904.02239) | [leymir/hyperbolic-image-embeddings](https://github.com/leymir/hyperbolic-image-embeddings) |
 | `hcnn` | — | [ICLR 2024](https://openreview.net/forum?id=ekz1hN5QNh) | [kschwethelm/HyperbolicCV](https://github.com/kschwethelm/HyperbolicCV) |
@@ -76,7 +137,7 @@ embeddings = model.encode(batch)
 
 | Model            | Available | Paper | Code |
 |------------------|:---------:|-------|------|
-| `megadescriptor` | [![HF](https://img.shields.io/badge/🤗-HuggingFace-yellow)](https://huggingface.co/BVRA/MegaDescriptor-L-384) | [WACV 2024](https://openaccess.thecvf.com/content/WACV2024/papers/Cermak_WildlifeDatasets_An_Open-Source_Toolkit_for_Animal_Re-Identification_WACV_2024_paper.pdf) | [WildlifeDatasets/wildlife-datasets](https://github.com/WildlifeDatasets/wildlife-datasets) |
+| `megadescriptor` (via timm) | [![HF](https://img.shields.io/badge/🤗-HuggingFace-yellow)](https://huggingface.co/BVRA/MegaDescriptor-L-384) | [WACV 2024](https://openaccess.thecvf.com/content/WACV2024/papers/Cermak_WildlifeDatasets_An_Open-Source_Toolkit_for_Animal_Re-Identification_WACV_2024_paper.pdf) | [WildlifeDatasets/wildlife-datasets](https://github.com/WildlifeDatasets/wildlife-datasets) |
 | `sphereface`     | — | [CVPR 2017](https://arxiv.org/abs/1704.08063) | [wy1iu/sphereface](https://github.com/wy1iu/sphereface) |
 | `arcface`       | — | [CVPR 2019](https://arxiv.org/abs/1801.07698) | [deepinsight/insightface](https://github.com/deepinsight/insightface) |
 
